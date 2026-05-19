@@ -228,6 +228,10 @@ app.get("/api/health", (req, res) => {
   res.json({ ok: true });
 });
 
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 app.post("/api/generate", async (req, res) => {
   try {
     if (!process.env.YANDEX_API_KEY || !process.env.YANDEX_FOLDER_ID) {
