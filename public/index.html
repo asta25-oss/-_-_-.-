@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MerchAI — генератор дизайнов мерча</title>
+  <meta name="description" content="Одностраничный сайт веб-сервиса для генерации концепций корпоративного мерча с помощью YandexGPT." />
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: rgba(255,255,255,.92);
+      --text: #101828;
+      --muted: #667085;
+      --line: #d7dfed;
+      --accent: #2563eb;
+      --accent-2: #7c3aed;
+      --soft: #eef4ff;
+      --dark: #111827;
+      --good: #0f8a5f;
+      --shadow: 0 24px 70px rgba(16, 24, 40, .12);
+      --radius: 28px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      font-family: Arial, Helvetica, sans-serif;
+      letter-spacing: 0;
+    }
+
+    * { letter-spacing: 0 !important; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 0%, rgba(37,99,235,.16), transparent 28%),
+        radial-gradient(circle at 100% 10%, rgba(124,58,237,.12), transparent 28%),
+        var(--bg);
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .wrap {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    header {
+      min-height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 900;
+    }
+
+    .logo-mark {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      object-fit: cover;
+      display: block;
+      box-shadow: 0 14px 36px rgba(37,99,235,.16);
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    nav a:hover { color: var(--accent); }
+
+    .hero {
+      padding: 26px 0 34px;
+      display: grid;
+      grid-template-columns: 1fr .92fr;
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid rgba(215,223,237,.88);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .hero-main {
+      padding: 48px;
+      min-height: 650px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .badge {
+      width: fit-content;
+      padding: 9px 13px;
+      border-radius: 999px;
+      background: var(--soft);
+      color: #1d4ed8;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    h1 {
+      margin: 24px 0 18px;
+      max-width: 760px;
+      font-size: clamp(42px, 5.5vw, 76px);
+      line-height: .92;
+    }
+
+    .lead {
+      margin: 0;
+      max-width: 650px;
+      color: var(--muted);
+      font-size: 19px;
+      line-height: 1.58;
+    }
+
+    .actions {
+      margin-top: 30px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 16px;
+      padding: 15px 19px;
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: .18s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 16px 34px rgba(37,99,235,.24);
+    }
+
+    .btn-primary:hover { transform: translateY(-1px); filter: brightness(.98); }
+
+    .btn-ghost {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .btn-ghost:hover { color: var(--accent); border-color: var(--accent); }
+
+    .stats {
+      margin-top: 34px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .stat {
+      padding: 16px;
+      border: 1px solid #e8eef8;
+      border-radius: 20px;
+      background: #f9fbff;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 24px;
+    }
+
+    .stat span {
+      margin-top: 6px;
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .generator {
+      padding: 28px;
+    }
+
+    .generator h2 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+
+    .generator .note {
+      margin: 0 0 20px;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 15px;
+    }
+
+    form {
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      color: #344054;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 13px 14px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 102px;
+      resize: vertical;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.10);
+    }
+
+    .result {
+      margin-top: 18px;
+      min-height: 190px;
+      border: 1px dashed #adc0df;
+      border-radius: 20px;
+      padding: 18px;
+      background: #f8fbff;
+      color: var(--muted);
+      line-height: 1.55;
+      white-space: pre-wrap;
+      font-size: 15px;
+    }
+
+    .result.ready {
+      background: #fff;
+      border-style: solid;
+      color: var(--text);
+    }
+
+    .result-text {
+      margin-top: 16px;
+      white-space: pre-wrap;
+    }
+
+    .result-text h4,
+    .refinement h4 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+
+    .result-image {
+      width: 100%;
+      margin-top: 16px;
+      border-radius: 18px;
+      border: 1px solid #e8eef8;
+      display: block;
+      background: #f2f5fb;
+    }
+
+    .variant-grid {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      white-space: normal;
+    }
+
+    .variant-card {
+      border: 1px solid #dbe6f5;
+      border-radius: 18px;
+      padding: 9px;
+      background: #f8fbff;
+    }
+
+    .variant-card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.10);
+      background: #fff;
+    }
+
+    .variant-card img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 12px;
+      display: block;
+      background: #eef2f8;
+    }
+
+    .variant-card button {
+      width: 100%;
+      margin-top: 8px;
+      border: 0;
+      border-radius: 11px;
+      padding: 9px 10px;
+      background: #fff;
+      color: var(--text);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .variant-card.selected button {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .result-warning {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #fff7ed;
+      color: #9a3412;
+      font-size: 14px;
+      white-space: normal;
+    }
+
+    .field-hint {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+      font-weight: 700;
+    }
+
+    .refinement {
+      margin-top: 16px;
+      padding: 14px;
+      border: 1px solid #dbe6f5;
+      border-radius: 18px;
+      background: #f8fbff;
+      white-space: normal;
+    }
+
+    .refinement textarea {
+      min-height: 86px;
+      margin-top: 8px;
+    }
+
+    .refinement .btn {
+      margin-top: 10px;
+      width: 100%;
+    }
+
+    .cards {
+      padding: 24px 0 22px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .card {
+      padding: 24px;
+      min-height: 236px;
+    }
+
+    .card h3 {
+      margin: 0 0 12px;
+      font-size: 23px;
+    }
+
+    .card p,
+    .card li {
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 15px;
+    }
+
+    .card ul {
+      margin: 12px 0 0;
+      padding-left: 18px;
+    }
+
+    .workflow {
+      margin: 8px 0 48px;
+      padding: 28px;
+      color: #fff;
+      background: linear-gradient(135deg, #111827, #1f2937);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .workflow h2 {
+      margin: 0 0 18px;
+      font-size: 30px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+
+    .step {
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 20px;
+      background: rgba(255,255,255,.08);
+    }
+
+    .step b {
+      display: block;
+      margin-bottom: 9px;
+      color: #a7c1ff;
+    }
+
+    .step span {
+      color: rgba(255,255,255,.78);
+      font-size: 14px;
+      line-height: 1.42;
+    }
+
+    footer {
+      padding: 22px 0 42px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 13px;
+    }
+
+    @media (max-width: 960px) {
+      .hero { grid-template-columns: 1fr; }
+      .hero-main { min-height: auto; }
+      .cards { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      header { align-items: flex-start; flex-direction: column; padding: 18px 0; }
+      nav { flex-wrap: wrap; }
+      .hero-main, .generator, .workflow { padding: 22px; }
+      .grid-2, .stats { grid-template-columns: 1fr; }
+      .logo-mark {
+        width: 42px;
+        height: 42px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="logo" href="#top" aria-label="MerchAI">
+        <img class="logo-mark" src="/assets/merchai-logo.jpg" alt="" />
+        <span>MerchAI</span>
+      </a>
+      <nav aria-label="Основная навигация">
+        <a href="#generator">Генерация</a>
+        <a href="#benefits">Возможности</a>
+        <a href="#workflow">Путь клиента</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="panel hero-main">
+          <div>
+            <div class="badge">MerchAI веб-сервис</div>
+            <h1>ИИ-дизайн мерча для бизнеса</h1>
+            <p class="lead">
+              Сайт помогает компаниям быстро получить концепцию изображения для корпоративного мерча:
+              футболок, худи, кружек, шоперов и стикеров. Пользователь выбирает тип товара,
+              стиль, цвета и задачу, а YandexGPT формирует идею, слоган и промпт для генерации визуала.
+            </p>
+            <div class="actions">
+              <a class="btn btn-primary" href="#generator">Создать концепцию</a>
+              <a class="btn btn-ghost" href="#workflow">Как это работает</a>
+            </div>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <strong>5 шагов</strong>
+              <span>от задачи бизнеса до готового описания дизайна</span>
+            </div>
+            <div class="stat">
+              <strong>B2B</strong>
+              <span>для HR, маркетинга, мероприятий и локальных брендов</span>
+            </div>
+            <div class="stat">
+              <strong>API</strong>
+              <span>форма сайта отправляет данные в серверный обработчик</span>
+            </div>
+          </div>
+        </div>
+
+        <aside class="panel generator" id="generator">
+          <h2>Генератор мерча</h2>
+          <p class="note">
+            Выберите тип мерча, материал, цель и палитру. Кратко опишите идею, а затем запустите генерацию:
+            сервис предложит концепцию и несколько визуальных вариантов, из которых можно выбрать подходящий.
+          </p>
+
+          <form id="merchForm">
+            <div class="grid-2">
+              <label>
+                Тип мерча
+                <select name="item" required>
+                  <option value="футболка">Футболка</option>
+                  <option value="худи">Худи</option>
+                  <option value="кружка">Кружка</option>
+                  <option value="шопер">Шопер</option>
+                  <option value="стикеры">Стикеры</option>
+                </select>
+              </label>
+
+              <label>
+                Материал футболки
+                <select name="material" required>
+                  <option value="хлопок">Хлопок</option>
+                  <option value="синтетика">Синтетика</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="grid-2">
+              <label>
+                Цель
+                <select name="goal" required>
+                  <option value="подарок сотрудникам">Подарок сотрудникам</option>
+                  <option value="подарок клиентам">Подарок клиентам</option>
+                  <option value="мероприятие">Мероприятие</option>
+                  <option value="продажа мерча">Продажа мерча</option>
+                </select>
+              </label>
+
+              <label>
+                Стиль
+                <select name="style" required>
+                  <option value="минимализм">Минимализм</option>
+                  <option value="корпоративный стиль">Корпоративный</option>
+                  <option value="яркий промо-стиль">Яркий промо-стиль</option>
+                  <option value="премиальный стиль">Премиальный</option>
+                  <option value="юмористический стиль">Юмористический</option>
+                </select>
+              </label>
+
+              <label>
+                Цвета
+                <input name="colors" placeholder="Например: синий, белый, серебристый" required />
+              </label>
+            </div>
+
+            <label>
+              Компания / сфера бизнеса
+              <input name="company" placeholder="Например: кофейня, ИТ-компания, университет" required />
+            </label>
+
+            <label>
+              Краткое описание идеи
+              <textarea name="brief" placeholder="Например: нужен мерч для конференции, аудитория — молодые специалисты, хочется современный образ без перегруза" required></textarea>
+            </label>
+
+            <label>
+              Идея принта без текста
+              <textarea name="printPrompt" placeholder="Например: абстрактная схема нейросети, волны кофе, пиксельная карта города. Буквы и логотипы лучше добавлять позже отдельным слоем."></textarea>
+            </label>
+
+            <label>
+              Логотип или изображение из открытых источников
+              <textarea name="sourceReference" placeholder="Например: мем про дедлайн, стикер в стиле Telegram, ссылка на свой логотип или описание изображения. Используйте свои материалы или изображения с разрешённой лицензией."></textarea>
+              <span class="field-hint">Сейчас это поле формирует ТЗ и поисковый ориентир. Для автоматического поиска картинок и мемов в интернете нужно подключить отдельный Search API с фильтром лицензий.</span>
+            </label>
+
+            <button class="btn btn-primary" type="submit">Сгенерировать мерч</button>
+          </form>
+
+          <div class="result" id="result">Здесь появятся варианты изображения мерча, поле для доработки выбранного варианта и короткие рекомендации для дизайнера.</div>
+        </aside>
+      </section>
+
+      <section class="cards" id="benefits">
+        <article class="panel card">
+          <h3>Кому мы можем помочь</h3>
+          <p>HR-специалисты, маркетологи, владельцы малого бизнеса, организаторы мероприятий и локальные бренды, которым нужен быстрый визуальный вариант мерча.</p>
+        </article>
+
+        <article class="panel card">
+          <h3>Проблема</h3>
+          <ul>
+            <li>Долго искать идею и дизайнера.</li>
+            <li>Сложно объяснить визуальную задачу.</li>
+            <li>Нужно быстро проверить несколько направлений.</li>
+          </ul>
+        </article>
+
+        <article class="panel card">
+          <h3>Что мы Вам предлагаем</h3>
+          <p>Сервис структурирует вводные данные и превращает их в готовую концепцию: образ, стиль, слоган, промпт и рекомендации для печати.</p>
+        </article>
+      </section>
+
+      <section class="workflow" id="workflow">
+        <h2>Путь пользователя</h2>
+        <div class="steps">
+          <div class="step"><b>01</b><span>Выбор типа мерча и бизнес-задачи.</span></div>
+          <div class="step"><b>02</b><span>Указание стиля, цветов и сферы компании.</span></div>
+          <div class="step"><b>03</b><span>Передача данных в серверный обработчик.</span></div>
+          <div class="step"><b>04</b><span>YandexGPT формирует концепцию и промпт.</span></div>
+          <div class="step"><b>05</b><span>Пользователь сохраняет результат или передаёт его дизайнеру.</span></div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      Учебный прототип: веб-сервис генерации концепций корпоративного мерча с применением искусственного интеллекта.
+    </footer>
+  </div>
+
+  <script>
+    const form = document.getElementById('merchForm');
+    const result = document.getElementById('result');
+    let lastRequestData = null;
+    let selectedVariantIndex = 0;
+
+    function selectVariant(card, index) {
+      selectedVariantIndex = index;
+      document.querySelectorAll('.variant-card').forEach((item) => {
+        item.classList.toggle('selected', item === card);
+        const button = item.querySelector('button');
+        button.textContent = item === card ? 'Выбран' : 'Выбрать';
+      });
+    }
+
+    async function regenerateSelected(textarea, button) {
+      const refinement = textarea.value.trim();
+
+      if (!refinement) {
+        textarea.focus();
+        textarea.placeholder = 'Сначала опишите, что нужно изменить в выбранном варианте.';
+        return;
+      }
+
+      if (!lastRequestData) return;
+
+      button.disabled = true;
+      button.textContent = 'Генерируем доработку...';
+
+      try {
+        const response = await fetch('/api/regenerate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...lastRequestData,
+            selectedVariant: selectedVariantIndex,
+            refinement
+          })
+        });
+
+        if (!response.ok) throw new Error('Не удалось запустить доработку');
+        const json = await response.json();
+
+        showResult({
+          text: json.text || demoGenerate(lastRequestData),
+          image: json.image,
+          variants: json.variants || [],
+          imageError: json.imageError
+        });
+      } catch (error) {
+        button.disabled = false;
+        button.textContent = 'Сгенерировать доработку';
+      }
+    }
+
+    function showResult({ text, image, variants = [], imageError }) {
+      result.textContent = '';
+      selectedVariantIndex = 0;
+
+      const preparedVariants = variants.length
+        ? variants
+        : image
+          ? [{ title: 'Вариант 1', image }]
+          : [];
+
+      if (preparedVariants.length) {
+        const grid = document.createElement('div');
+        grid.className = 'variant-grid';
+
+        preparedVariants.forEach((variant, index) => {
+          const card = document.createElement('div');
+          card.className = `variant-card${index === 0 ? ' selected' : ''}`;
+
+          const imageElement = document.createElement('img');
+          imageElement.src = variant.image;
+          imageElement.alt = variant.title || `Вариант ${index + 1}`;
+
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = index === 0 ? 'Выбран' : 'Выбрать';
+          button.addEventListener('click', () => selectVariant(card, index));
+
+          card.append(imageElement, button);
+          grid.append(card);
+        });
+
+        result.append(grid);
+      }
+
+      if (preparedVariants.length) {
+        const refinement = document.createElement('div');
+        refinement.className = 'refinement';
+
+        const title = document.createElement('h4');
+        title.textContent = 'Доработать выбранный вариант';
+
+        const hint = document.createElement('div');
+        hint.className = 'field-hint';
+        hint.textContent = 'После выбора картинки опишите, что добавить: надпись, логотип, ссылку на изображение, расположение, размер или настроение. Это станет коротким ТЗ для следующей итерации.';
+
+        const textarea = document.createElement('textarea');
+        textarea.placeholder = 'Например: добавить логотип слева на груди, надпись на спине, использовать изображение по ссылке, сделать принт крупнее и спокойнее по цветам.';
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-primary';
+        button.textContent = 'Сгенерировать доработку';
+        button.addEventListener('click', () => regenerateSelected(textarea, button));
+
+        refinement.append(title, hint, textarea, button);
+        result.append(refinement);
+      }
+
+      if (text) {
+        const textBlock = document.createElement('div');
+        textBlock.className = 'result-text';
+
+        const title = document.createElement('h4');
+        title.textContent = 'Дизайнерские рекомендации';
+
+        const body = document.createElement('div');
+        body.textContent = text;
+
+        textBlock.append(title, body);
+        result.append(textBlock);
+      }
+
+      if (imageError) {
+        const warning = document.createElement('div');
+        warning.className = 'result-warning';
+        warning.textContent = `Часть изображений не создана: ${imageError}`;
+        result.append(warning);
+      }
+    }
+
+    function demoGenerate(data) {
+      return `1. Концепция: ${data.style} для товара «${data.item}» из материала «${data.material}». Палитра: ${data.colors}.\n\n2. Цвет и материал: для хлопка лучше выбирать мягкие матовые цвета, для синтетики — более яркие и контрастные решения.\n\n3. Принт и композиция: держите основной элемент крупным, без мелких деталей и нечитаемого текста.\n\n4. Логотипы и изображения: добавляйте свои файлы или материалы из открытых источников только при наличии разрешённой лицензии.\n\n5. Что передать дизайнеру: выбранный вариант, палитру, материал, место нанесения и пожелания из поля доработки.`;
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(form).entries());
+      lastRequestData = data;
+
+      result.classList.remove('ready');
+      result.textContent = 'Запрос отправлен. Генерируем концепцию и 3 варианта мерча... Это может занять несколько минут.';
+
+      try {
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (!response.ok) throw new Error('Серверная часть не подключена');
+        const json = await response.json();
+
+        showResult({
+          text: json.text || demoGenerate(data),
+          image: json.image,
+          variants: json.variants || [],
+          imageError: json.imageError
+        });
+      } catch (error) {
+        showResult({ text: demoGenerate(data) });
+      }
+
+      result.classList.add('ready');
+    });
+  </script>
+</body>
+</html>

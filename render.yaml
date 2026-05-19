@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: merch-yandexgpt-site
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: YANDEX_API_KEY
+        sync: false
+      - key: YANDEX_FOLDER_ID
+        sync: false
