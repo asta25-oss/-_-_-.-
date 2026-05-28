@@ -112,6 +112,34 @@ REPLICATE_IMAGE_MODEL=black-forest-labs/flux-schnell
 
 Если ключ выбранного провайдера не задан, сервис покажет демо-варианты без ошибки интерфейса.
 
+## Cloudflare Pages без карты
+
+Проект можно выложить бесплатно через Cloudflare Pages без платежной карты. Для этого используется статический frontend из `public/` и Pages Functions из `functions/`.
+
+Настройки Cloudflare Pages:
+
+```text
+Framework preset: None
+Build command: оставить пустым
+Build output directory: public
+Root directory: /
+```
+
+В `Settings` -> `Environment variables` добавьте:
+
+```text
+YANDEX_API_KEY
+YANDEX_FOLDER_ID
+```
+
+Cloudflare Functions:
+
+- `functions/api/generate-start.js` запускает генерацию YandexART и сразу возвращает operation id.
+- `functions/api/generate-status.js` проверяет готовность изображений.
+- `functions/api/order.js` принимает заявку в демо-режиме без постоянного хранения.
+
+Такой режим нужен потому, что YandexART генерирует изображения асинхронно, а serverless-функции не должны держать один запрос 60-90 секунд.
+
 ## Заявки
 
 Сейчас `/api/order` сохраняет заявки локально в:

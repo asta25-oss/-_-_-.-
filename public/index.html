@@ -2048,6 +2048,10 @@
       lastRequestData = data;
       setMessage('');
 
+      if (endpoint === '/api/generate' || endpoint === '/api/regenerate') {
+        return requestAsyncGeneration(data);
+      }
+
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2057,6 +2061,51 @@
       const json = await response.json();
       if (!response.ok) throw new Error(json.message || 'Сервер не смог обработать запрос.');
       return json;
+    }
+
+    async function requestAsyncGeneration(data) {
+      const startResponse = await fetch('/api/generate-start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const started = await startResponse.json();
+      if (!startResponse.ok) throw new Error(started.message || 'Сервер не смог запустить генерацию.');
+      if (started.demo || started.variants) return started;
+
+      let jobs = started.jobs || [];
+      const collected = [];
+      const messages = started.imageError ? [started.imageError] : [];
+
+      for (let attempt = 0; attempt < 36 && jobs.length; attempt += 1) {
+        setGenerationStatus(`YandexART готовит варианты: ${collected.length}/3`, true);
+        await new Promise((resolve) => setTimeout(resolve, attempt < 2 ? 2500 : 4000));
+
+        const statusResponse = await fetch('/api/generate-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobs })
+        });
+        const status = await statusResponse.json();
+        if (!statusResponse.ok) throw new Error(status.message || 'Сервер не смог проверить генерацию.');
+
+        if (status.variants?.length) {
+          collected.push(...status.variants);
+        }
+        if (status.imageError) {
+          messages.push(status.imageError);
+        }
+
+        jobs = status.pending || [];
+        if (collected.length >= 3 && !jobs.length) break;
+      }
+
+      return {
+        variants: collected.slice(0, 3),
+        imageError: collected.length < 3
+          ? (messages.join('\n') || 'YandexART не успел подготовить все 3 варианта. Попробуйте повторить генерацию.')
+          : undefined
+      };
     }
 
     fileButton.addEventListener('click', () => fileInput.click());
@@ -2162,8 +2211,9 @@
 
       try {
         const json = await requestGeneration('/api/generate');
-        renderVariants(await preparePrintVariants(json.variants || []));
-        setGenerationStatus(`Готово: ${viewLabel()}`);
+        const preparedVariants = await preparePrintVariants(json.variants || []);
+        renderVariants(preparedVariants);
+        setGenerationStatus(preparedVariants.length ? `Готово: ${viewLabel()}` : `Нет генерации: ${viewLabel()}`);
         if (json.imageError) setMessage(json.imageError);
       } catch (error) {
         setMessage(error.message);
@@ -2191,8 +2241,9 @@
           selectedVariant: selectedVariantIndex(),
           refinement: text
         });
-        renderVariants(await preparePrintVariants(json.variants || []));
-        setGenerationStatus(`Готово: ${viewLabel()}`);
+        const preparedVariants = await preparePrintVariants(json.variants || []);
+        renderVariants(preparedVariants);
+        setGenerationStatus(preparedVariants.length ? `Готово: ${viewLabel()}` : `Нет генерации: ${viewLabel()}`);
         if (json.imageError) setMessage(json.imageError);
       } catch (error) {
         setMessage(error.message);

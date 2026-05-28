@@ -276,6 +276,61 @@ async function getImageOperation(operationId) {
   return response.json();
 }
 
+async function startYandexPrintOperation(input, variant = 0) {
+  const response = await fetch(`${YANDEX_API_URL}/foundationModels/v1/imageGenerationAsync`, {
+    method: "POST",
+    headers: yandexHeaders(),
+    body: JSON.stringify({
+      modelUri: `art://${process.env.YANDEX_FOLDER_ID}/yandex-art/latest`,
+      messages: [
+        {
+          text: buildPrintPrompt(input, variant, 480),
+          weight: "1"
+        }
+      ],
+      generationOptions: {
+        mimeType: "image/jpeg",
+        seed: String(Date.now() + variant),
+        aspectRatio: {
+          widthRatio: "1",
+          heightRatio: "1"
+        }
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Ошибка YandexART: ${errorText}`);
+  }
+
+  const operation = await response.json();
+  if (!operation.id) {
+    throw new Error("YandexART не вернул идентификатор операции.");
+  }
+
+  return operation.id;
+}
+
+async function startYandexPrintJobs(input, count = 3) {
+  const jobs = [];
+  const errors = [];
+  const maxAttempts = count + 3;
+
+  for (let attempt = 0; attempt < maxAttempts && jobs.length < count; attempt += 1) {
+    try {
+      jobs.push({
+        title: `Вариант ${jobs.length + 1}`,
+        operationId: await startYandexPrintOperation(input, attempt)
+      });
+    } catch (error) {
+      errors.push(`Попытка ${attempt + 1}: ${error.message}`);
+    }
+  }
+
+  return { jobs, errors };
+}
+
 async function generatePrint(input, variant = 0) {
   if (imageProvider() === "openai") {
     return generatePrintOpenAI(input, variant);
@@ -494,6 +549,95 @@ app.get("/api/health", (req, res) => {
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+app.post("/api/generate-start", async (req, res) => {
+  try {
+    const input = normalizeInput(req.body);
+    const provider = imageProvider();
+
+    if (provider !== "yandex") {
+      return res.status(400).json({
+        message: "Асинхронный Cloudflare-режим сейчас поддерживает IMAGE_PROVIDER=yandex."
+      });
+    }
+
+    if (!providerIsConfigured(provider)) {
+      return res.json({
+        demo: true,
+        variants: buildDemoVariants(input),
+        imageError: "На сервере не заполнены YANDEX_API_KEY и/или YANDEX_FOLDER_ID. Показаны демо-варианты."
+      });
+    }
+
+    const { jobs, errors } = await startYandexPrintJobs(input, 3);
+    if (!jobs.length) {
+      return res.json({
+        demo: true,
+        variants: buildDemoVariants(input),
+        imageError: buildGenerationError(provider, errors)
+      });
+    }
+
+    res.json({ jobs, imageError: errors.length ? errors.join("\n") : undefined });
+  } catch (error) {
+    res.status(400).json({
+      message: `Ошибка запуска генерации: ${error.message}`
+    });
+  }
+});
+
+app.post("/api/generate-status", async (req, res) => {
+  try {
+    const jobs = Array.isArray(req.body?.jobs) ? req.body.jobs : [];
+    const variants = [];
+    const pending = [];
+    const errors = [];
+
+    for (const job of jobs) {
+      const operationId = cleanString(job?.operationId, 200);
+      const title = cleanString(job?.title, 80) || `Вариант ${variants.length + pending.length + 1}`;
+
+      if (!operationId) {
+        errors.push(`${title}: нет идентификатора операции.`);
+        continue;
+      }
+
+      try {
+        const operation = await getImageOperation(operationId);
+        if (!operation.done) {
+          pending.push({ title, operationId });
+          continue;
+        }
+
+        if (operation.error) {
+          errors.push(`${title}: ${operation.error.message || JSON.stringify(operation.error)}`);
+          continue;
+        }
+
+        const image = operation?.response?.image;
+        if (!image) {
+          errors.push(`${title}: YandexART завершил операцию, но не вернул изображение.`);
+          continue;
+        }
+
+        variants.push({ title, printImage: `data:image/jpeg;base64,${image}` });
+      } catch (error) {
+        errors.push(`${title}: ${error.message}`);
+      }
+    }
+
+    res.json({
+      done: pending.length === 0,
+      pending,
+      variants,
+      imageError: errors.length ? errors.join("\n") : undefined
+    });
+  } catch (error) {
+    res.status(400).json({
+      message: `Ошибка проверки генерации: ${error.message}`
+    });
+  }
 });
 
 app.post("/api/generate", async (req, res) => {
