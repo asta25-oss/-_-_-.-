@@ -1,87 +1,76 @@
 # MerchAI
 
-Одностраничный сайт для генерации концепций корпоративного мерча через YandexGPT.
+Веб-сервис для генерации концепций корпоративного мерча и подготовки заявки на производство.
 
-## Что внутри
+Текущая версия работает как конструктор:
 
-- `public/index.html` - интерфейс сайта.
-- `server.js` - Node.js/Express сервер и безопасный запрос к YandexGPT.
+- клиент выбирает тип товара, шаблон и цвет основы;
+- клиент выбирает палитру дизайна для генерации принта;
+- описывает задачу в одном свободном поле;
+- может загрузить логотип или картинку;
+- сервис генерирует 3 варианта принта через YandexART, OpenAI Image API или Replicate;
+- браузер накладывает выбранный принт на пустой шаблон товара;
+- клиент смотрит макет спереди и сзади;
+- клиент может вручную настроить размер, позицию, поворот и прозрачность принта;
+- клиент может добавить читаемую надпись отдельным текстовым слоем;
+- после выбора варианта заполняет заявку на производство.
+
+## Файлы
+
+- `server.js` - Express-сервер, image API-провайдеры, заявки.
+- `public/index.html` - интерфейс конструктора, мокапы, ручная посадка принта, текстовый слой, загрузка файла, форма заказа.
+- `public/assets/merchai-logo.jpg` - логотип.
+- `public/assets/mockups/` - пустые мокапы товаров для наложения принтов.
 - `.env.example` - пример локальных переменных окружения.
-- `.gitignore` - защита от случайной публикации `.env` и `node_modules`.
-- `package.json` - зависимости и команда запуска.
-
-## Важно про GitHub Pages
-
-GitHub Pages подходит только для статического HTML/CSS/JS. В этом проекте есть серверный маршрут `/api/generate` и секретный `YANDEX_API_KEY`, поэтому рабочую версию с YandexGPT нужно размещать на Node.js-хостинге: Render, Railway, VPS, Yandex Cloud или похожем сервисе.
-
-GitHub лучше использовать как хранилище кода, а публичный сайт запускать на хостинге, который умеет хранить переменные окружения.
+- `render.yaml` - конфигурация Render.
 
 ## Локальный запуск
 
-1. Установите Node.js LTS: https://nodejs.org/en/download
-2. Установите Git for Windows, если хотите отправлять проект в GitHub с компьютера: https://git-scm.com/download/win
-3. Скопируйте `.env.example` в `.env`.
-4. Заполните `.env`:
-
-```env
-YANDEX_API_KEY=ваш_api_key
-YANDEX_FOLDER_ID=ваш_folder_id
-PORT=3000
-```
-
-5. Установите зависимости:
-
 ```bash
 npm install
-```
-
-6. Запустите сайт:
-
-```bash
 npm start
 ```
 
-7. Откройте:
+Открыть:
 
 ```text
 http://localhost:3000
 ```
 
-Проверка сервера:
+Health-check:
 
 ```text
 http://localhost:3000/api/health
 ```
 
-## Как получить ключи Yandex Cloud
+## Переменные окружения
 
-1. Откройте Yandex Cloud: https://console.yandex.cloud
-2. Создайте или выберите каталог.
-3. Скопируйте `YANDEX_FOLDER_ID`.
-   Официальная инструкция: https://yandex.cloud/docs/resource-manager/operations/folder/get-id
-4. Создайте сервисный аккаунт.
-5. Выдайте сервисному аккаунту права для работы с Foundation Models / YandexGPT.
-   Для полной версии с картинками нужны две роли:
+Создайте `.env` по примеру `.env.example`:
+
+```env
+YANDEX_API_KEY=ваш_api_key
+YANDEX_FOLDER_ID=ваш_folder_id
+IMAGE_PROVIDER=yandex
+PORT=3000
+```
+
+`.env` нельзя публиковать в GitHub.
+
+Для Yandex Cloud нужны роли:
 
 ```text
-ai.languageModels.user
 ai.imageGeneration.user
 ```
 
-6. Создайте API-ключ сервисного аккаунта.
-   Официальная инструкция: https://yandex.cloud/ru/docs/iam/operations/api-key/create
-7. Сохраните секретный ключ сразу. После закрытия окна Yandex Cloud может больше не показать его полностью.
+Если позже снова понадобится текстовая генерация через YandexGPT, добавьте также:
 
-Если при создании API-ключа доступен выбор области действия, добавьте доступ к генерации текста и изображений: `yc.ai.languageModels.execute` и `yc.ai.imageGeneration.execute` / `yc.ai.foundationModels.execute`, если такие пункты есть в интерфейсе.
+```text
+ai.languageModels.user
+```
 
-## Деплой на Render
+## Render
 
-1. Создайте репозиторий GitHub: https://github.com/new
-2. Загрузите туда файлы проекта. Не загружайте `.env`.
-3. Откройте Render: https://render.com
-4. Нажмите `New` -> `Web Service`.
-5. Подключите GitHub-репозиторий.
-6. Укажите настройки:
+Для Render используйте:
 
 ```text
 Environment: Node
@@ -89,48 +78,52 @@ Build Command: npm install
 Start Command: npm start
 ```
 
-7. В разделе `Environment Variables` добавьте:
+В `Environment Variables` добавьте:
 
 ```text
-YANDEX_API_KEY=ваш_api_key
-YANDEX_FOLDER_ID=ваш_folder_id
+YANDEX_API_KEY
+YANDEX_FOLDER_ID
+IMAGE_PROVIDER
 ```
 
-8. Нажмите `Deploy Web Service`.
-9. После деплоя Render даст публичный адрес вида:
+## Провайдеры генерации
+
+По умолчанию используется `IMAGE_PROVIDER=yandex`.
+
+Для OpenAI:
+
+```env
+IMAGE_PROVIDER=openai
+OPENAI_API_KEY=ваш_openai_api_key
+OPENAI_IMAGE_MODEL=gpt-image-2
+OPENAI_IMAGE_QUALITY=medium
+OPENAI_IMAGE_SIZE=1024x1024
+OPENAI_IMAGE_FORMAT=png
+OPENAI_IMAGE_BACKGROUND=transparent
+```
+
+Для бюджетного теста через Replicate:
+
+```env
+IMAGE_PROVIDER=replicate
+REPLICATE_API_TOKEN=ваш_replicate_token
+REPLICATE_IMAGE_MODEL=black-forest-labs/flux-schnell
+```
+
+Если ключ выбранного провайдера не задан, сервис покажет демо-варианты без ошибки интерфейса.
+
+## Заявки
+
+Сейчас `/api/order` сохраняет заявки локально в:
 
 ```text
-https://your-project.onrender.com
+orders/orders.jsonl
 ```
 
-Официальные инструкции Render:
+Папка `orders/` добавлена в `.gitignore`. На Render бесплатного тарифа такое хранение не является постоянной базой данных. Для боевого сценария лучше подключить отправку в почту, Telegram, CRM, Google Sheets или базу данных.
 
-- https://render.com/docs/deploy-node-express-app
-- https://render.com/docs/environment-variables
+## Важные ограничения
 
-## Подключение домена
-
-1. Купите домен у регистратора.
-2. В настройках Render откройте ваш Web Service.
-3. Перейдите в `Settings` -> `Custom Domains`.
-4. Добавьте домен, например:
-
-```text
-merchai.ru
-www.merchai.ru
-```
-
-5. Render покажет DNS-записи, которые нужно добавить у регистратора.
-6. Откройте DNS-настройки домена у регистратора и добавьте записи из Render.
-7. Дождитесь обновления DNS. Обычно это занимает от нескольких минут до 24 часов.
-8. В Render включите HTTPS/SSL, если он не включился автоматически.
-
-## Что нельзя публиковать
-
-Никогда не добавляйте в GitHub:
-
-- `.env`
-- настоящий `YANDEX_API_KEY`
-- другие секретные ключи
-
-Если ключ уже случайно попал в публичный репозиторий, удалите его в Yandex Cloud и создайте новый.
+- YandexART плохо рисует читаемый текст, поэтому текст и логотипы лучше накладывать отдельными слоями.
+- Автоматический поиск мемов и картинок из интернета пока не подключен. Для публичного продукта нужен легальный Search API и фильтр лицензий.
+- Пустые шаблоны лежат в `public/assets/mockups/`. Для точного результата нужно постепенно уточнять зоны печати под каждый конкретный мокап.

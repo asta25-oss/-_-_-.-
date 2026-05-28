@@ -9,3 +9,5 @@ services:
         sync: false
       - key: YANDEX_FOLDER_ID
         sync: false
+      - key: IMAGE_PROVIDER
+        value: yandex

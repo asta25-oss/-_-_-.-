@@ -1,5 +1,6 @@
 .env
 node_modules/
+orders/
 npm-debug.log*
 .DS_Store
 Otchet_*.docx
